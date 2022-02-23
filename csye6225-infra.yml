@@ -11,3 +11,34 @@ Parameters:
     Description: The name of the VPC being created.
     Type: String
     Default: "VPC"
+
+Mappings:
+  AZRegions:
+    us-east-1:
+      AZs: ["a", "b", "c"]
+    us-east-2:
+      AZs: ["a", "b", "c"]
+    us-west-1:
+      AZs: ["a", "b", "c"]
+    us-west-2:
+      AZs: ["a", "b", "c"]
+    ap-northeast-1:
+      AZs: ["a", "b", "c"]
+    ap-northeast-2:
+      AZs: ["a", "b", "c"]
+    ap-south-1:
+      AZs: ["a", "b", "c"]
+    ap-southeast-1:
+      AZs: ["a", "b", "c"]
+    ap-southeast-2:
+      AZs: ["a", "b", "c"]
+    ca-central-1:
+      AZs: ["a", "b", "c"]
+    eu-central-1:
+      AZs: ["a", "b", "c"]
+    eu-west-1:
+      AZs: ["a", "b", "c"]
+    eu-west-2:
+      AZs: ["a", "b", "c"]
+    sa-east-1:
+      AZs: ["a", "b", "c"]
