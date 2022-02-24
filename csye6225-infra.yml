@@ -42,3 +42,19 @@ Mappings:
       AZs: ["a", "b", "c"]
     sa-east-1:
       AZs: ["a", "b", "c"]
+
+
+Resources:
+  VPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      CidrBlock: !Ref "VPCCIDRBlock"
+      Tags:
+        - Key: "Name"
+          Value: !Join
+            - ""
+            - - Ref: "AWS::StackName"
+              - "-"
+              - !Ref "VPCName"
