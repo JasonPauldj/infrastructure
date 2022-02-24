@@ -142,3 +142,18 @@ Resources:
           Ref: "VPC"
         InternetGatewayId:
           Ref: "InternetGateway"
+
+  PublicRouteTable:
+      Type: "AWS::EC2::RouteTable"
+      Properties:
+        VpcId:
+          Ref: "VPC"
+        Tags:
+          -
+            Key: "Name"
+            Value: !Join
+              - ''
+              - - !Ref  "AWS::StackName"
+                - "-"
+                - !Ref "VPCName"
+                - '-public-route-table'
