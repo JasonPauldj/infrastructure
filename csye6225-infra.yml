@@ -2,6 +2,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
 Description: "Creates a VPC with 3 subnets in 3 different availability zones in an AWS region."
+#Parameters to be provided by the user.
 Parameters:
   VPCCIDRBlock:
     Description: "CIDR block for VPC"
@@ -12,6 +13,8 @@ Parameters:
     Type: String
     Default: "VPC"
 
+#Mappings of different regions.
+#Creates subnets based on the AWS_REGION
 Mappings:
   AZRegions:
     us-east-1:
