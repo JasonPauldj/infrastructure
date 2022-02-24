@@ -157,3 +157,28 @@ Resources:
                 - "-"
                 - !Ref "VPCName"
                 - '-public-route-table'
+
+  PublicSubnetRouteTableAssociation0:
+      Type: "AWS::EC2::SubnetRouteTableAssociation"
+      Properties:
+        SubnetId:
+          Ref: "PublicSubnet0"
+        RouteTableId:
+          Ref: "PublicRouteTable"
+
+  PublicSubnetRouteTableAssociation1:
+      Type: "AWS::EC2::SubnetRouteTableAssociation"
+      Properties:
+        SubnetId:
+          Ref: "PublicSubnet1"
+        RouteTableId:
+          Ref: "PublicRouteTable"
+
+  PublicSubnetRouteTableAssociation2:
+      Type: "AWS::EC2::SubnetRouteTableAssociation"
+      Properties:
+        SubnetId:
+          Ref: "PublicSubnet2"
+        RouteTableId:
+          Ref: "PublicRouteTable"
+
