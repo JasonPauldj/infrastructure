@@ -6,3 +6,7 @@ This repository contains all the infrastructure as code(Cloudformation templates
   ```
   aws cloudformation create-stack --stack-name mystack --template-body file://csye6225-infra.yml --parameters ParameterKey=VPCName,ParameterValue=VPC ParameterKey=VPCCIDRBlock,ParameterValue=10.0.0.0/16
   ```
+* Updating a stack
+  ```
+  aws cloudformation update-stack --stack-name mystack --template-body file://csye6225-infra.yml --parameters ParameterKey=VPCName,ParameterValue=VPC ParameterKey=VPCCIDRBlock,ParameterValue=10.0.0.0/16
+  ```

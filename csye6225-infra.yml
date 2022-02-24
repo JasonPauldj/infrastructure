@@ -43,7 +43,6 @@ Mappings:
     sa-east-1:
       AZs: ["a", "b", "c"]
 
-
 Resources:
   VPC:
     Type: "AWS::EC2::VPC"
@@ -58,3 +57,24 @@ Resources:
             - - Ref: "AWS::StackName"
               - "-"
               - !Ref "VPCName"
+
+  PublicSubnet0:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId:
+        Ref: "VPC"
+      AvailabilityZone:
+        Fn::Sub:
+          - "${AWS::Region}${AZ}"
+          - AZ: !Select [0, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
+      CidrBlock: !Select [0, !Cidr [!GetAtt VPC.CidrBlock, 3, 14]]
+      MapPublicIpOnLaunch: "true"
+      Tags:
+        - Key: "Name"
+          Value: !Join
+            - ""
+            - - !Ref "AWS::StackName"
+              - "-"
+              - !Ref "VPCName"
+              - "-public-"
+              - !Select [0, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
