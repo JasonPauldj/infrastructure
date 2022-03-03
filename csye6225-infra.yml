@@ -1,7 +1,7 @@
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: "Creates a VPC with 3 subnets in 3 different availability zones in an AWS region."
+Description: "Creates a VPC with 3 subnets in 3 different availability zones in an AWS region. Generate an EC2 instance"
 #Parameters to be provided by the user.
 Parameters:
   VPCCIDRBlock:
@@ -12,6 +12,9 @@ Parameters:
     Description: The name of the VPC being created.
     Type: String
     Default: "VPC"
+  AMIId:
+    Description: The id of the AMI used to generate the EC2 instance
+    Type: String
 
 #Mappings of different regions.
 #Creates subnets based on the AWS_REGION
@@ -194,3 +197,52 @@ Resources:
         DestinationCidrBlock: "0.0.0.0/0"
         GatewayId:
           Ref: "InternetGateway"
+
+  InstanceSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Allow traffic to ports 80, 443, 3306"
+      VpcId:
+         Ref: "VPC"
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: "0.0.0.0/0"     
+        - IpProtocol: "tcp"
+          FromPort: "80"
+          ToPort: "80"
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: "tcp"
+          FromPort: "443"
+          ToPort: "443"
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: "tcp"
+          FromPort: "3306"
+          ToPort: "3306"
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: "tcp"
+          FromPort: "3000"
+          ToPort: "3000"
+          CidrIp: "0.0.0.0/0"
+      Tags:
+          -
+            Key: "Name"
+            Value: "application"
+
+  MyEC2Instance: 
+    Type: "AWS::EC2::Instance"
+    Properties: 
+      ImageId: !Ref "AMIId"
+      InstanceType : "t2.micro"
+      DisableApiTermination : "false"
+      KeyName: "dev-ssh-key"
+      SecurityGroupIds:
+        - !Ref "InstanceSecurityGroup"
+      SubnetId: !Ref "PublicSubnet0"
+      BlockDeviceMappings: 
+        - DeviceName: "/dev/xvda"
+          Ebs: 
+            VolumeType: "gp2"
+            DeleteOnTermination: "true"
+            VolumeSize: "20"
