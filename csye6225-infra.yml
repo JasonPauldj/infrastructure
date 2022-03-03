@@ -25,7 +25,7 @@ Mappings:
     us-east-2:
       AZs: ["a", "b", "c"]
     us-west-1:
-      AZs: ["a", "b", "c"]
+      AZs: ["a", "b"]
     us-west-2:
       AZs: ["a", "b", "c"]
     ap-northeast-1:
@@ -246,3 +246,11 @@ Resources:
             VolumeType: "gp2"
             DeleteOnTermination: "true"
             VolumeSize: "20"
+      Tags:
+          -
+            Key: "Name"
+            Value: !Join
+              - ''
+              - - !Ref  "AWS::StackName"
+                - "-"
+                - 'EC2'
