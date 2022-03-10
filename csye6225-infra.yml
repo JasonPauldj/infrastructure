@@ -15,6 +15,15 @@ Parameters:
   AMIId:
     Description: The id of the AMI used to generate the EC2 instance
     Type: String
+  EnvType:
+    Description: The enviroment either test or prod
+    AllowedValues:
+      - "dev"
+      - "prod"
+    Type: String
+  # DBMasterUserPassword:
+  #   Description: The password for the DB MasterUser
+  #   Type: String
 
 #Mappings of different regions.
 #Creates subnets based on the AWS_REGION
@@ -73,7 +82,7 @@ Resources:
         Fn::Sub:
           - "${AWS::Region}${AZ}"
           - AZ: !Select [0, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
-      CidrBlock: !Select [0, !Cidr [!GetAtt VPC.CidrBlock, 3, 14]]
+      CidrBlock: !Select [0, !Cidr [!GetAtt VPC.CidrBlock, 6, 10]]
       MapPublicIpOnLaunch: "true"
       Tags:
         - Key: "Name"
@@ -94,7 +103,7 @@ Resources:
         Fn::Sub:
           - "${AWS::Region}${AZ}"
           - AZ: !Select [1, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
-      CidrBlock: !Select [1, !Cidr [!GetAtt VPC.CidrBlock, 3, 14]]
+      CidrBlock: !Select [1, !Cidr [!GetAtt VPC.CidrBlock, 6, 10]]
       MapPublicIpOnLaunch: "true"
       Tags:
         - Key: "Name"
@@ -116,7 +125,7 @@ Resources:
         Fn::Sub:
           - "${AWS::Region}${AZ}"
           - AZ: !Select [2, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
-      CidrBlock: !Select [2, !Cidr [!GetAtt VPC.CidrBlock, 3, 14]]
+      CidrBlock: !Select [2, !Cidr [!GetAtt VPC.CidrBlock, 6, 10]]
       MapPublicIpOnLaunch: "true"
       Tags:
         - Key: "Name"
@@ -126,6 +135,70 @@ Resources:
               - "-"
               - !Ref "VPCName"
               - "-public-"
+              - !Select [2, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
+
+  PrivateSubnet0:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId:
+        Ref: "VPC"
+      AvailabilityZone:
+        Fn::Sub:
+          - "${AWS::Region}${AZ}"
+          - AZ: !Select [0, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
+      CidrBlock: !Select [3, !Cidr [!GetAtt VPC.CidrBlock, 6, 10]]
+      MapPublicIpOnLaunch: "true"
+      Tags:
+        - Key: "Name"
+          Value: !Join
+            - ""
+            - - !Ref "AWS::StackName"
+              - "-"
+              - !Ref "VPCName"
+              - "-private-"
+              - !Select [0, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
+
+  PrivateSubnet1:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId:
+        Ref: "VPC"
+      AvailabilityZone:
+        Fn::Sub:
+          - "${AWS::Region}${AZ}"
+          - AZ: !Select [1, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
+      CidrBlock: !Select [4, !Cidr [!GetAtt VPC.CidrBlock, 6, 10]]
+      MapPublicIpOnLaunch: "true"
+      Tags:
+        - Key: "Name"
+          Value: !Join
+            - ""
+            - - !Ref "AWS::StackName"
+              - "-"
+              - !Ref "VPCName"
+              - "-private-"
+              - !Select [1, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
+
+
+  PrivateSubnet2:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId:
+        Ref: "VPC"
+      AvailabilityZone:
+        Fn::Sub:
+          - "${AWS::Region}${AZ}"
+          - AZ: !Select [2, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
+      CidrBlock: !Select [5, !Cidr [!GetAtt VPC.CidrBlock, 6, 10]]
+      MapPublicIpOnLaunch: "true"
+      Tags:
+        - Key: "Name"
+          Value: !Join
+            - ""
+            - - !Ref "AWS::StackName"
+              - "-"
+              - !Ref "VPCName"
+              - "-private-"
               - !Select [2, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
 
   InternetGateway:
@@ -164,6 +237,21 @@ Resources:
                 - !Ref "VPCName"
                 - '-public-route-table'
 
+  PrivateRouteTable:
+      Type: "AWS::EC2::RouteTable"
+      Properties:
+        VpcId:
+          Ref: "VPC"
+        Tags:
+          -
+            Key: "Name"
+            Value: !Join
+              - ''
+              - - !Ref  "AWS::StackName"
+                - "-"
+                - !Ref "VPCName"
+                - '-private-route-table'
+
   PublicSubnetRouteTableAssociation0:
       Type: "AWS::EC2::SubnetRouteTableAssociation"
       Properties:
@@ -188,6 +276,30 @@ Resources:
         RouteTableId:
           Ref: "PublicRouteTable"
 
+  PrivateSubnetRouteTableAssociation0:
+      Type: "AWS::EC2::SubnetRouteTableAssociation"
+      Properties:
+        SubnetId:
+          Ref: "PrivateSubnet0"
+        RouteTableId:
+          Ref: "PrivateRouteTable"
+
+  PrivateSubnetRouteTableAssociation1:
+      Type: "AWS::EC2::SubnetRouteTableAssociation"
+      Properties:
+        SubnetId:
+          Ref: "PrivateSubnet1"
+        RouteTableId:
+          Ref: "PrivateRouteTable"
+
+  PrivateSubnetRouteTableAssociation2:
+      Type: "AWS::EC2::SubnetRouteTableAssociation"
+      Properties:
+        SubnetId:
+          Ref: "PrivateSubnet2"
+        RouteTableId:
+          Ref: "PrivateRouteTable"
+
   PublicRoute:
       Type: "AWS::EC2::Route"
       DependsOn: "GatewayToInternet"
@@ -202,6 +314,7 @@ Resources:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
       GroupDescription: "Allow traffic to ports 80, 443, 3306"
+      GroupName: "application"
       VpcId:
          Ref: "VPC"
       SecurityGroupIngress:
@@ -229,9 +342,18 @@ Resources:
           -
             Key: "Name"
             Value: "application"
+      
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: EC2Role
+
 
   MyEC2Instance: 
     Type: "AWS::EC2::Instance"
+    DependsOn: "RDSInstance"
     Properties: 
       ImageId: !Ref "AMIId"
       InstanceType : "t2.micro"
@@ -246,6 +368,26 @@ Resources:
             VolumeType: "gp2"
             DeleteOnTermination: "true"
             VolumeSize: "20"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/sh
+          cd /etc/profile.d
+          touch custom.sh               
+          echo export MYSQL_HOST=${RDSInstance.Endpoint.Address} >> custom.sh
+          echo export MYSQL_USER=csye6225 >> custom.sh
+          echo export MYSQL_PASSWORD=TorzWiTJmNMVnImc >> custom.sh
+          echo export MYSQL_DATABASE=csye6225 >> custom.sh
+          echo export S3_BUCKETNAME=${S3Bucket} >> custom.sh
+          echo export AWS_REGION=${AWS::Region} >> custom.sh
+          cd /etc/systemd/system
+          touch db.env
+          echo MYSQL_HOST=${RDSInstance.Endpoint.Address} >> db.env
+          echo MYSQL_USER=csye6225 >> db.env
+          echo MYSQL_PASSWORD=TorzWiTJmNMVnImc >> db.env
+          echo MYSQL_DATABASE=csye6225 >> db.env
+          echo S3_BUCKETNAME=${S3Bucket} >> db.env
+          echo AWS_REGION=${AWS::Region} >> db.env
+      IamInstanceProfile: !Ref EC2InstanceProfile
       Tags:
           -
             Key: "Name"
@@ -254,3 +396,154 @@ Resources:
               - - !Ref  "AWS::StackName"
                 - "-"
                 - 'EC2'
+
+  DatabaseSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    DependsOn: "VPC"
+    Properties:
+      GroupDescription: "Allow traffic to DB from only application instances"
+      GroupName: "database"
+      VpcId:
+         Ref: "VPC"
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "3306"
+          ToPort: "3306"
+          SourceSecurityGroupId:
+            Ref: "InstanceSecurityGroup"
+      Tags:
+          -
+            Key: "Name"
+            Value: "database"
+  
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - ec2.amazonaws.com
+            Action: sts:AssumeRole
+      RoleName: "EC2-CSYE6225"
+      Tags:
+      - 
+        Key: Name
+        Value: EC2Role
+      Path: "/" 
+   
+  WebAppS3Policy:
+    Type: AWS::IAM::Policy
+    DependsOn: S3Bucket
+    Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 's3:PutObject'
+                - 's3:GetObject'
+                - 's3:DeleteObject'
+              Resource:
+                - !GetAtt S3Bucket.Arn
+                - Fn::Join:
+                  - ''
+                  - - !GetAtt S3Bucket.Arn
+                    - "/*"
+        PolicyName: WebAppS3
+        Roles:
+          - Ref: EC2Role
+
+  S3Bucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Join
+        - ""
+        - - !Select [2, !Split [/, !Ref AWS::StackId ]]
+          - "."
+          - !Ref EnvType
+          - ".jasonpauldj.me"
+      PublicAccessBlockConfiguration: 
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+            BucketKeyEnabled: true
+      LifecycleConfiguration: 
+        Rules: 
+          -
+            Id: "StandardIARule"
+            Status: "Enabled"
+            Transitions:
+              - StorageClass: "STANDARD_IA"
+                TransitionInDays: "30"
+    DeletionPolicy: "Delete"
+
+  DBParameterGroup:
+    Type: "AWS::RDS::DBParameterGroup"
+    Properties:
+      Description: "This is the parameter group for MySQL DB."
+      Family: "mysql8.0"
+      Tags:
+          -
+            Key: "Name"
+            Value: "DBParameterGroup"
+
+  DBSubnetGroup: 
+    Type: "AWS::RDS::DBSubnetGroup"
+    DependsOn:
+      - PrivateSubnet0
+      - PrivateSubnet1
+      - PrivateSubnet2
+    Properties: 
+      DBSubnetGroupDescription: "The DB subnet group for the RDS instance."
+      DBSubnetGroupName: "DBSubnetGroup"
+      SubnetIds: 
+        - !Ref "PrivateSubnet0"
+        - !Ref "PrivateSubnet1"
+        - !Ref "PrivateSubnet2"
+      Tags: 
+        - 
+          Key: "Name"
+          Value: "DB Subnet Group"
+    
+  RDSInstance:
+    Type: "AWS::RDS::DBInstance"
+    DependsOn: 
+      - "DBSubnetGroup"
+      - "DatabaseSecurityGroup"
+    Properties:
+      Engine: "mysql"
+      DBInstanceClass: "db.t2.micro"
+      MultiAZ: "false"
+      AllocatedStorage : "20"
+      DBInstanceIdentifier: "csye6225"
+      MasterUsername: "csye6225"
+      MasterUserPassword: "TorzWiTJmNMVnImc"
+      VPCSecurityGroups:
+        - !Ref "DatabaseSecurityGroup"
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      DBParameterGroupName: !Ref DBParameterGroup
+      PubliclyAccessible: false
+      DBName: "csye6225"
+
+
+
+
+
+
+  # SecurityGroupIngressForDBSG:
+  #   Type: "AWS::EC2::SecurityGroupIngress"
+  #   Properties:
+  #     IpProtocol : "tcp"
+  #     SourceSecurityGroupId:
+  #      Ref: "InstanceSecurityGroup"
+  #     FromPort: "3306"
+  #     ToPort: "3306"
+
