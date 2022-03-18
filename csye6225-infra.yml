@@ -533,6 +533,58 @@ Resources:
       PubliclyAccessible: false
       DBName: "csye6225"
 
+  ec2LaunchTemplate:
+    Type: "AWS::EC2::LaunchTemplate"
+    Properties:
+      LaunchTemplateName: !Sub '${AWS::StackName}-launch-template'
+      LaunchTemplateData:
+        BlockDeviceMappings:
+          - 
+           DeviceName: "/dev/xvda"
+           Ebs: 
+            VolumeType: "gp2"
+            DeleteOnTermination: "true"
+            VolumeSize: "20"
+        ImageId: !Ref "AMIId"
+        InstanceType : "t2.micro"
+        KeyName: "dev-ssh-key"
+        SecurityGroupIds:
+          - !Ref "InstanceSecurityGroup"
+        UserData:
+        Fn::Base64: !Sub |
+          #!/bin/sh
+          cd /etc/profile.d
+          touch custom.sh               
+          echo export MYSQL_HOST=${RDSInstance.Endpoint.Address} >> custom.sh
+          echo export MYSQL_USER=csye6225 >> custom.sh
+          echo export MYSQL_PASSWORD=TorzWiTJmNMVnImc >> custom.sh
+          echo export MYSQL_DATABASE=csye6225 >> custom.sh
+          echo export S3_BUCKETNAME=${S3Bucket} >> custom.sh
+          echo export AWS_REGION=${AWS::Region} >> custom.sh
+          cd /etc/systemd/system
+          touch db.env
+          echo MYSQL_HOST=${RDSInstance.Endpoint.Address} >> db.env
+          echo MYSQL_USER=csye6225 >> db.env
+          echo MYSQL_PASSWORD=TorzWiTJmNMVnImc >> db.env
+          echo MYSQL_DATABASE=csye6225 >> db.env
+          echo S3_BUCKETNAME=${S3Bucket} >> db.env
+          echo AWS_REGION=${AWS::Region} >> db.env
+        IamInstanceProfile: !Ref EC2InstanceProfile
+        TagSpecifications:
+          - ResourceType: "instance"
+            Tags:
+              - Key: "Name"
+                Value: !Join
+                  - ''
+                  - - !Ref  "AWS::StackName"
+                    - "-"
+                    - 'EC2'
+
+
+
+        
+
+
 
 
 
