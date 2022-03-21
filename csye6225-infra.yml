@@ -21,6 +21,9 @@ Parameters:
       - "dev"
       - "prod"
     Type: String
+  DNSDomain:
+    Description: The domain name for the A record for load balancer 
+    Type: String
   # DBMasterUserPassword:
   #   Description: The password for the DB MasterUser
   #   Type: String
@@ -754,6 +757,18 @@ Resources:
       LoadBalancerArn: !Ref loadBalancer
       Port: 80
       Protocol: "HTTP"
+  
+  DNSRecord:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      Comment: " DNS for application"
+      HostedZoneName: !Sub '${DNSDomain}'
+      RecordSets:
+        - Name: !Sub '${DNSDomain}'
+          Type: A
+          AliasTarget:
+            DNSName: !GetAtt 'loadBalancer.DNSName'
+            HostedZoneId: !GetAtt 'loadBalancer.CanonicalHostedZoneID'
   
   # scaleUpPolicy:
   #   Type: "AWS::AutoScaling::ScalingPolicy"
