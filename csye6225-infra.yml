@@ -324,8 +324,8 @@ Resources:
         - IpProtocol: "tcp"
           FromPort: "22"
           ToPort: "22"
-          #CidrIp: "0.0.0.0/0"   
-          SourceSecurityGroupId: !Ref loadBalancerSecurityGroup  
+          CidrIp: "0.0.0.0/0"   
+          #SourceSecurityGroupId: !Ref loadBalancerSecurityGroup  
         - IpProtocol: "tcp"
           FromPort: "3000"
           ToPort: "3000"
