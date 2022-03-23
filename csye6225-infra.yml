@@ -316,7 +316,7 @@ Resources:
   InstanceSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
-      GroupDescription: "Allow traffic to ports 80, 443, 3306"
+      GroupDescription: "Allow traffic to ports 22 and 3000 from load balancer"
       GroupName: "application"
       VpcId:
          Ref: "VPC"
@@ -324,23 +324,8 @@ Resources:
         - IpProtocol: "tcp"
           FromPort: "22"
           ToPort: "22"
-          CidrIp: "0.0.0.0/0"     
-        - IpProtocol: "tcp"
-          FromPort: "80"
-          ToPort: "80"
-          CidrIp: "0.0.0.0/0"
-        - IpProtocol: "tcp"
-          FromPort: "443"
-          ToPort: "443"
-          CidrIp: "0.0.0.0/0"
-        - IpProtocol: "tcp"
-          FromPort: "3306"
-          ToPort: "3306"
-          CidrIp: "0.0.0.0/0"
-        - IpProtocol: "tcp"
-          FromPort: "3000"
-          ToPort: "3000"
-          CidrIp: "0.0.0.0/0"
+          #CidrIp: "0.0.0.0/0"   
+          SourceSecurityGroupId: !Ref loadBalancerSecurityGroup  
         - IpProtocol: "tcp"
           FromPort: "3000"
           ToPort: "3000"
@@ -710,7 +695,7 @@ Resources:
   loadBalancerSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
-      GroupDescription: "Allow traffic to port 80"
+      GroupDescription: "Allow traffic to port 80 from the internet"
       GroupName: "loadbalancer"
       VpcId:
          Ref: "VPC"
@@ -718,6 +703,10 @@ Resources:
         - IpProtocol: "tcp"
           FromPort: "80"
           ToPort: "80"
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: "tcp"
+          FromPort: "443"
+          ToPort: "443"
           CidrIp: "0.0.0.0/0"
       Tags:
           -
@@ -769,25 +758,3 @@ Resources:
           AliasTarget:
             DNSName: !GetAtt 'loadBalancer.DNSName'
             HostedZoneId: !GetAtt 'loadBalancer.CanonicalHostedZoneID'
-  
-  # scaleUpPolicy:
-  #   Type: "AWS::AutoScaling::ScalingPolicy"
-  #   Properties:
-  #     AutoScalingGroupName: !Ref ec2AutoScalingGroup
-  #     PolicyType: TargetTrackingScaling
-  #     TargetTrackingConfiguration:
-  #       PredefinedMetricSpecification:
-  #         PredefinedMetricType: "ASGAverageCPUUtilization"
-  #       TargetValue: 5
-
-
-
-  # SecurityGroupIngressForDBSG:
-  #   Type: "AWS::EC2::SecurityGroupIngress"
-  #   Properties:
-  #     IpProtocol : "tcp"
-  #     SourceSecurityGroupId:
-  #      Ref: "InstanceSecurityGroup"
-  #     FromPort: "3306"
-  #     ToPort: "3306"
-
