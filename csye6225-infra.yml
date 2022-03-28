@@ -1,7 +1,7 @@
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: "Creates a VPC with 3 subnets in 3 different availability zones in an AWS region. Generate an EC2 instance"
+Description: "Builds the infrastructure for the application."
 #Parameters to be provided by the user.
 Parameters:
   VPCCIDRBlock:

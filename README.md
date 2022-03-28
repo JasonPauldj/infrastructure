@@ -19,3 +19,17 @@ aws cloudformation create-stack --stack-name mystack1 --template-body file://csy
 ```
 aws cloudformation delete-stack --stack-name mystack1
 ```
+* Creating policies for ghactions-app
+```
+aws cloudformation create-stack --stack-name policystack --template-body file://csye6225-policy.yml --parameters ParameterKey=CodeDeployS3Bucket,ParameterValue=csye6225-codedeploy-jasonpauldj --capabilities CAPABILITY_NAMED_IAM
+```
+
+* Updating policies for ghactions-app
+```
+aws cloudformation update-stack --stack-name policystack --template-body file://csye6225-policy.yml --parameters ParameterKey=CodeDeployS3Bucket,ParameterValue=csye6225-codedeploy-jasonpauldj --capabilities CAPABILITY_NAMED_IAM
+```
+
+* Deleting policies for ghactions-app
+```
+aws cloudformation delete-stack --stack-name policystack
+```
