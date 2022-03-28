@@ -827,3 +827,29 @@ Resources:
           AliasTarget:
             DNSName: !GetAtt 'loadBalancer.DNSName'
             HostedZoneId: !GetAtt 'loadBalancer.CanonicalHostedZoneID'
+  
+  CodeDeployApplication:
+    Type: "AWS::CodeDeploy::Application"
+    Properties: 
+      ApplicationName: "csye6225-webapp"
+      ComputePlatform: "Server"
+  
+  CodeDeployApplicationGroup:
+    Type: "AWS::CodeDeploy::DeploymentGroup"
+    DependsOn: CodeDeployServiceRole
+    Properties:
+      ApplicationName: !Ref CodeDeployApplication
+      ServiceRoleArn: !GetAtt CodeDeployServiceRole.Arn
+      DeploymentStyle:
+        DeploymentType: IN_PLACE
+      AutoScalingGroups: !Ref ec2AutoScalingGroup
+      DeploymentConfigName: CodeDeployDefault.AllAtOnce	
+      AutoRollbackConfiguration:
+        Enabled: true
+        Events:
+        - DEPLOYMENT_FAILURE
+      DeploymentGroupName: "csye6225-webapp-deployment"
+      Ec2TagFilters:
+        Key: "Application"
+        Type: KEY_AND_VALUE
+        Value: "WebApp"
