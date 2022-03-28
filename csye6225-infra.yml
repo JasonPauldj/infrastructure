@@ -344,8 +344,6 @@ Resources:
       Path: "/"
       Roles:
       - Ref: EC2Role
-      - Ref: CodeDeployEC2ServiceRole
-      - Ref: CodeDeployServiceRole
 
 
   # MyEC2Instance: 
@@ -425,31 +423,36 @@ Resources:
               - ec2.amazonaws.com
             Action: sts:AssumeRole
       RoleName: "EC2-CSYE6225"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
       Tags:
       - 
         Key: Name
         Value: EC2Role
       Path: "/" 
 
-  CodeDeployEC2ServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-              - ec2.amazonaws.com
-            Action: sts:AssumeRole
-      Description: "Role is required for EC2 instances to download the latest application revision."
-      RoleName: "CodeDeployEC2ServiceRole"
-      Tags:
-      - 
-        Key: Name
-        Value: CodeDeployEC2ServiceRole
-      Path: "/" 
+  # this role is useless.
+  # CodeDeployEC2ServiceRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service:
+  #             - ec2.amazonaws.com
+  #           Action: sts:AssumeRole
+  #     Description: "Role is required for EC2 instances to download the latest application revision."
+  #     RoleName: "CodeDeployEC2ServiceRole"
+  #     Tags:
+  #     - 
+  #       Key: Name
+  #       Value: CodeDeployEC2ServiceRole
+  #     Path: "/" 
 
+
+  #this service role is for the code deploy
   CodeDeployServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -459,7 +462,7 @@ Resources:
           - Effect: Allow
             Principal:
               Service:
-              - ec2.amazonaws.com
+              - codedeploy.amazonaws.com
             Action: sts:AssumeRole
       Description: "Role is required for CodeDeploy agent to work."
       RoleName: "CodeDeployServiceRole"
@@ -470,7 +473,8 @@ Resources:
         Key: Name
         Value: CodeDeployServiceRole
       Path: "/" 
-   
+  
+  #Policy for EC2 instance to add, fetch and delete objects from S3 bucket
   WebAppS3Policy:
     Type: AWS::IAM::Policy
     DependsOn: S3Bucket
@@ -493,6 +497,7 @@ Resources:
         Roles:
           - Ref: EC2Role
 
+  #Policy for EC2 instance to fetch from CodeDeploy Bucket
   CodeDeployEC2S3:
     Type: AWS::IAM::Policy
     Properties:
@@ -515,7 +520,7 @@ Resources:
                     - !Ref CodeDeployS3Bucket
         PolicyName: "CodeDeploy-EC2-S3"
         Roles:
-          - Ref: CodeDeployEC2ServiceRole
+          - Ref: EC2Role
 
   S3Bucket:
     Type: "AWS::S3::Bucket"
@@ -841,8 +846,10 @@ Resources:
       ApplicationName: !Ref CodeDeployApplication
       ServiceRoleArn: !GetAtt CodeDeployServiceRole.Arn
       DeploymentStyle:
+        DeploymentOption: WITHOUT_TRAFFIC_CONTROL
         DeploymentType: IN_PLACE
-      AutoScalingGroups: !Ref ec2AutoScalingGroup
+      AutoScalingGroups: 
+        - !Ref ec2AutoScalingGroup
       DeploymentConfigName: CodeDeployDefault.AllAtOnce	
       AutoRollbackConfiguration:
         Enabled: true
@@ -850,6 +857,7 @@ Resources:
         - DEPLOYMENT_FAILURE
       DeploymentGroupName: "csye6225-webapp-deployment"
       Ec2TagFilters:
-        Key: "Application"
-        Type: KEY_AND_VALUE
-        Value: "WebApp"
+        -
+          Key: "Application"
+          Type: KEY_AND_VALUE
+          Value: "WebApp"
