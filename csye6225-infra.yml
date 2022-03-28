@@ -24,6 +24,9 @@ Parameters:
   DNSDomain:
     Description: The domain name for the A record for load balancer 
     Type: String
+  CodeDeployS3Bucket:
+    Description: "The name of the S3 bucket for Code Deploy"
+    Type: String
   # DBMasterUserPassword:
   #   Description: The password for the DB MasterUser
   #   Type: String
@@ -341,6 +344,8 @@ Resources:
       Path: "/"
       Roles:
       - Ref: EC2Role
+      - Ref: CodeDeployEC2ServiceRole
+      - Ref: CodeDeployServiceRole
 
 
   # MyEC2Instance: 
@@ -425,6 +430,46 @@ Resources:
         Key: Name
         Value: EC2Role
       Path: "/" 
+
+  CodeDeployEC2ServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Description: "Role is required for EC2 instances to download the latest application revision."
+      RoleName: "CodeDeployEC2ServiceRole"
+      Tags:
+      - 
+        Key: Name
+        Value: CodeDeployEC2ServiceRole
+      Path: "/" 
+
+  CodeDeployServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Description: "Role is required for CodeDeploy agent to work."
+      RoleName: "CodeDeployServiceRole"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
+      Tags:
+      - 
+        Key: Name
+        Value: CodeDeployServiceRole
+      Path: "/" 
    
   WebAppS3Policy:
     Type: AWS::IAM::Policy
@@ -447,6 +492,30 @@ Resources:
         PolicyName: WebAppS3
         Roles:
           - Ref: EC2Role
+
+  CodeDeployEC2S3:
+    Type: AWS::IAM::Policy
+    Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 's3:GetObject'
+                - 's3:ListBucket'
+              Resource:
+                - Fn::Join:
+                  - ''
+                  - - "arn:aws:s3:::"
+                    - !Ref CodeDeployS3Bucket
+                    - "/*"
+                - Fn::Join:
+                  - ''
+                  - - "arn:aws:s3:::"
+                    - !Ref CodeDeployS3Bucket
+        PolicyName: "CodeDeploy-EC2-S3"
+        Roles:
+          - Ref: CodeDeployEC2ServiceRole
 
   S3Bucket:
     Type: "AWS::S3::Bucket"
