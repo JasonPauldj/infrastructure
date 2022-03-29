@@ -1,7 +1,7 @@
 ---
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: "Creates a VPC with 3 subnets in 3 different availability zones in an AWS region. Generate an EC2 instance"
+Description: "Builds the infrastructure for the application."
 #Parameters to be provided by the user.
 Parameters:
   VPCCIDRBlock:
@@ -23,6 +23,9 @@ Parameters:
     Type: String
   DNSDomain:
     Description: The domain name for the A record for load balancer 
+    Type: String
+  CodeDeployS3Bucket:
+    Description: "The name of the S3 bucket for Code Deploy"
     Type: String
   # DBMasterUserPassword:
   #   Description: The password for the DB MasterUser
@@ -420,12 +423,58 @@ Resources:
               - ec2.amazonaws.com
             Action: sts:AssumeRole
       RoleName: "EC2-CSYE6225"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
       Tags:
       - 
         Key: Name
         Value: EC2Role
       Path: "/" 
-   
+
+  # this role is useless.
+  # CodeDeployEC2ServiceRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service:
+  #             - ec2.amazonaws.com
+  #           Action: sts:AssumeRole
+  #     Description: "Role is required for EC2 instances to download the latest application revision."
+  #     RoleName: "CodeDeployEC2ServiceRole"
+  #     Tags:
+  #     - 
+  #       Key: Name
+  #       Value: CodeDeployEC2ServiceRole
+  #     Path: "/" 
+
+
+  #this service role is for the code deploy
+  CodeDeployServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - codedeploy.amazonaws.com
+            Action: sts:AssumeRole
+      Description: "Role is required for CodeDeploy agent to work."
+      RoleName: "CodeDeployServiceRole"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
+      Tags:
+      - 
+        Key: Name
+        Value: CodeDeployServiceRole
+      Path: "/" 
+  
+  #Policy for EC2 instance to add, fetch and delete objects from S3 bucket
   WebAppS3Policy:
     Type: AWS::IAM::Policy
     DependsOn: S3Bucket
@@ -445,6 +494,31 @@ Resources:
                   - - !GetAtt S3Bucket.Arn
                     - "/*"
         PolicyName: WebAppS3
+        Roles:
+          - Ref: EC2Role
+
+  #Policy for EC2 instance to fetch from CodeDeploy Bucket
+  CodeDeployEC2S3:
+    Type: AWS::IAM::Policy
+    Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 's3:GetObject'
+                - 's3:ListBucket'
+              Resource:
+                - Fn::Join:
+                  - ''
+                  - - "arn:aws:s3:::"
+                    - !Ref CodeDeployS3Bucket
+                    - "/*"
+                - Fn::Join:
+                  - ''
+                  - - "arn:aws:s3:::"
+                    - !Ref CodeDeployS3Bucket
+        PolicyName: "CodeDeploy-EC2-S3"
         Roles:
           - Ref: EC2Role
 
@@ -758,3 +832,32 @@ Resources:
           AliasTarget:
             DNSName: !GetAtt 'loadBalancer.DNSName'
             HostedZoneId: !GetAtt 'loadBalancer.CanonicalHostedZoneID'
+  
+  CodeDeployApplication:
+    Type: "AWS::CodeDeploy::Application"
+    Properties: 
+      ApplicationName: "csye6225-webapp"
+      ComputePlatform: "Server"
+  
+  CodeDeployApplicationGroup:
+    Type: "AWS::CodeDeploy::DeploymentGroup"
+    DependsOn: CodeDeployServiceRole
+    Properties:
+      ApplicationName: !Ref CodeDeployApplication
+      ServiceRoleArn: !GetAtt CodeDeployServiceRole.Arn
+      DeploymentStyle:
+        DeploymentOption: WITHOUT_TRAFFIC_CONTROL
+        DeploymentType: IN_PLACE
+      AutoScalingGroups: 
+        - !Ref ec2AutoScalingGroup
+      DeploymentConfigName: CodeDeployDefault.AllAtOnce	
+      AutoRollbackConfiguration:
+        Enabled: true
+        Events:
+        - DEPLOYMENT_FAILURE
+      DeploymentGroupName: "csye6225-webapp-deployment"
+      Ec2TagFilters:
+        -
+          Key: "Application"
+          Type: KEY_AND_VALUE
+          Value: "WebApp"
