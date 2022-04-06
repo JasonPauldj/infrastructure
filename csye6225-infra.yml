@@ -425,6 +425,7 @@ Resources:
       RoleName: "EC2-CSYE6225"
       ManagedPolicyArns:
       - "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
+      - "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
       Tags:
       - 
         Key: Name
