@@ -960,7 +960,7 @@ Resources:
       RoleName: "Lambda-CSYE6225"
       ManagedPolicyArns:
       - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-      - "arn:aws:iam::aws:policy/AmazonSESFullAccess"
+      # - "arn:aws:iam::aws:policy/AmazonSESFullAccess"
       Tags:
       - 
         Key: Name
@@ -986,6 +986,21 @@ Resources:
           ACCOUNT_ID: !Ref AWS::AccountId
           DYNAMODB_TABLE_NAME: !Ref DynamoDbTableUSentMails
 
+  #Creating Policy for lambda function to send email for SES
+  LambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - "ses:SendEmail"
+              Resource:
+                - !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/${EnvType}.jasonpauldj.me'
+        PolicyName: LambdaPolicy
+        Roles:
+          - Ref: LambdaRole
     
   #Create a SNS Topic which is subscribed by the Lambda function
   EmailSNSTopic:
