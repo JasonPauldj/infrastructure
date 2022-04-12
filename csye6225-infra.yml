@@ -888,6 +888,22 @@ Resources:
         AttributeName: "ttl"
         Enabled: true
 
+  #Create DYNAMODB table 
+  DynamoDbTableUSentMails:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "userId"
+          AttributeType: "S"
+        # - AttributeName: "ttl"
+        #   AttributeType: "N"
+      KeySchema:
+        - AttributeName: "userId"
+          KeyType: "HASH"
+      BillingMode: "PAY_PER_REQUEST"
+      TableName: "csye6225-SentMails"
+
+
   #Creating a POLICY for DynamoDBTable to read, write and delete for EC2 and Lambda
   DynamoDBPolicy:
     Type: AWS::IAM::Policy
@@ -910,12 +926,26 @@ Resources:
                 - 'dynamodb:UpdateItem'
               Resource:
                 - !GetAtt DynamoDbTableUsers.Arn
+            # - Effect: Allow
+            #   Action:
+            #     - 'dynamodb:BatchGetItem'
+            #     - 'dynamodb:BatchWriteItem'
+            #     - 'dynamodb:ConditionCheckItem'
+            #     - 'dynamodb:PutItem'
+            #     - 'dynamodb:DescribeTable'
+            #     - 'dynamodb:DeleteItem'
+            #     - 'dynamodb:GetItem'
+            #     - 'dynamodb:Scan'
+            #     - 'dynamodb:Query'
+            #     - 'dynamodb:UpdateItem'
+            #   Resource:
+                - !GetAtt DynamoDbTableUSentMails.Arn           
         PolicyName: DynamoDBPolicy
         Roles:
           - Ref: EC2Role
           - Ref: LambdaRole
  
-  #Createing SERVICE ROLE for Lambda
+  #Creating SERVICE ROLE for Lambda
   LambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -947,8 +977,15 @@ Resources:
       Runtime: "nodejs14.x"
       Timeout: 25
       Code:
-        S3Bucket: "csye6225-lambda-jasonpauldj"
+        S3Bucket: !Ref LambdaS3Bucket
         S3Key: "index.zip"
+      Environment:
+        Variables:
+          ENV_TYPE: !Ref EnvType
+          REGION: !Ref AWS::Region
+          ACCOUNT_ID: !Ref AWS::AccountId
+          DYNAMODB_TABLE_NAME: !Ref DynamoDbTableUSentMails
+
     
   #Create a SNS Topic which is subscribed by the Lambda function
   EmailSNSTopic:
