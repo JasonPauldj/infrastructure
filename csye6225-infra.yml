@@ -27,6 +27,9 @@ Parameters:
   CodeDeployS3Bucket:
     Description: "The name of the S3 bucket for Code Deploy"
     Type: String
+  LambdaS3Bucket:
+    Description: "The name of the S3 bucket for Lambda"
+    Type: String
   # DBMasterUserPassword:
   #   Description: The password for the DB MasterUser
   #   Type: String
@@ -628,6 +631,8 @@ Resources:
               echo export MYSQL_DATABASE=csye6225 >> custom.sh
               echo export S3_BUCKETNAME=${S3Bucket} >> custom.sh
               echo export AWS_REGION=${AWS::Region} >> custom.sh
+              echo export SNS_TOPIC_ARN=${EmailSNSTopic} >> custom.sh
+              echo export DYNAMODB_TABLE_NAME=${DynamoDbTableUsers} >> custom.sh
               cd /etc/systemd/system
               touch db.env
               echo MYSQL_HOST=${RDSInstance.Endpoint.Address} >> db.env
@@ -636,6 +641,8 @@ Resources:
               echo MYSQL_DATABASE=csye6225 >> db.env
               echo S3_BUCKETNAME=${S3Bucket} >> db.env
               echo AWS_REGION=${AWS::Region} >> db.env
+              echo SNS_TOPIC_ARN=${EmailSNSTopic} >> db.env
+              echo DYNAMODB_TABLE_NAME=${DynamoDbTableUsers} >> db.env              
         IamInstanceProfile: 
           Arn: !GetAtt  EC2InstanceProfile.Arn
         TagSpecifications:
@@ -862,3 +869,151 @@ Resources:
           Key: "Application"
           Type: KEY_AND_VALUE
           Value: "WebApp"
+
+  #Creating DYNAMODB table
+  DynamoDbTableUsers:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "userId"
+          AttributeType: "S"
+        # - AttributeName: "ttl"
+        #   AttributeType: "N"
+      KeySchema:
+        - AttributeName: "userId"
+          KeyType: "HASH"
+      BillingMode: "PAY_PER_REQUEST"
+      TableName: "csye6225-Users"
+      TimeToLiveSpecification: 
+        AttributeName: "ttl"
+        Enabled: true
+
+  #Creating a POLICY for DynamoDBTable to read, write and delete for EC2 and Lambda
+  DynamoDBPolicy:
+    Type: AWS::IAM::Policy
+    DependsOn: DynamoDbTableUsers
+    Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'dynamodb:BatchGetItem'
+                - 'dynamodb:BatchWriteItem'
+                - 'dynamodb:ConditionCheckItem'
+                - 'dynamodb:PutItem'
+                - 'dynamodb:DescribeTable'
+                - 'dynamodb:DeleteItem'
+                - 'dynamodb:GetItem'
+                - 'dynamodb:Scan'
+                - 'dynamodb:Query'
+                - 'dynamodb:UpdateItem'
+              Resource:
+                - !GetAtt DynamoDbTableUsers.Arn
+        PolicyName: DynamoDBPolicy
+        Roles:
+          - Ref: EC2Role
+          - Ref: LambdaRole
+ 
+  #Createing SERVICE ROLE for Lambda
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      RoleName: "Lambda-CSYE6225"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      - "arn:aws:iam::aws:policy/AmazonSESFullAccess"
+      Tags:
+      - 
+        Key: Name
+        Value: LambdaRole
+      Path: "/"  
+
+  #Creating LAMBDA function
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: "EmailService"
+      Handler: "index.emailService"
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: "nodejs14.x"
+      Timeout: 25
+      Code:
+        S3Bucket: "csye6225-lambda-jasonpauldj"
+        S3Key: "index.zip"
+    
+  #Create a SNS Topic which is subscribed by the Lambda function
+  EmailSNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - Endpoint: !GetAtt LambdaFunction.Arn
+          Protocol: "lambda"
+      TopicName: "EmailTopic"
+
+  #Create a Lambda Permission to allows SNS to invoke Lambda function
+  SNSLambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !Ref LambdaFunction
+      Principal: "sns.amazonaws.com"
+      SourceArn: !Ref EmailSNSTopic
+
+  #Creating a policy for SNS publishing and granting it to EC2Service-Role
+  SNSPolicy:
+    Type: AWS::IAM::Policy
+    DependsOn: EmailSNSTopic
+    Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'sns:Publish'
+              Resource:
+                - !Ref EmailSNSTopic
+        PolicyName: SNSPolicy
+        Roles:
+          - Ref: EC2Role
+  
+  #Creating a POLICY for GHACTIONS-LAMBDA
+  GHLambdaPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: GH-Lambda-Policy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "lambda:CreateFunction"
+              - "lambda:GetFunction"
+              - "lambda:UpdateFunctionCode"
+            Resource:
+              - !GetAtt LambdaFunction.Arn
+          - Effect: "Allow"
+            Action:
+              - "s3:ListBucket"
+              - "s3:PutObject"
+              - "s3:GetObject"
+            Resource:
+              - Fn::Join:
+                - ''
+                - - "arn:aws:s3:::"
+                  - !Ref LambdaS3Bucket
+                  - "/*"
+              - Fn::Join:
+                - ''
+                - - "arn:aws:s3:::"
+                  - !Ref LambdaS3Bucket
+      Users:
+        - "ghactions-lambda"
