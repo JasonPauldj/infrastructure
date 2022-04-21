@@ -438,26 +438,6 @@ Resources:
         Value: EC2Role
       Path: "/" 
 
-  # this role is useless.
-  # CodeDeployEC2ServiceRole:
-  #   Type: AWS::IAM::Role
-  #   Properties:
-  #     AssumeRolePolicyDocument:
-  #       Version: '2012-10-17'
-  #       Statement:
-  #         - Effect: Allow
-  #           Principal:
-  #             Service:
-  #             - ec2.amazonaws.com
-  #           Action: sts:AssumeRole
-  #     Description: "Role is required for EC2 instances to download the latest application revision."
-  #     RoleName: "CodeDeployEC2ServiceRole"
-  #     Tags:
-  #     - 
-  #       Key: Name
-  #       Value: CodeDeployEC2ServiceRole
-  #     Path: "/" 
-
 
   #this service role is for the code deploy
   CodeDeployServiceRole:
@@ -792,10 +772,6 @@ Resources:
          Ref: "VPC"
       SecurityGroupIngress:    
         - IpProtocol: "tcp"
-          FromPort: "80"
-          ToPort: "80"
-          CidrIp: "0.0.0.0/0"
-        - IpProtocol: "tcp"
           FromPort: "443"
           ToPort: "443"
           CidrIp: "0.0.0.0/0"
@@ -938,19 +914,6 @@ Resources:
                 - 'dynamodb:UpdateItem'
               Resource:
                 - !GetAtt DynamoDbTableUsers.Arn
-            # - Effect: Allow
-            #   Action:
-            #     - 'dynamodb:BatchGetItem'
-            #     - 'dynamodb:BatchWriteItem'
-            #     - 'dynamodb:ConditionCheckItem'
-            #     - 'dynamodb:PutItem'
-            #     - 'dynamodb:DescribeTable'
-            #     - 'dynamodb:DeleteItem'
-            #     - 'dynamodb:GetItem'
-            #     - 'dynamodb:Scan'
-            #     - 'dynamodb:Query'
-            #     - 'dynamodb:UpdateItem'
-            #   Resource:
                 - !GetAtt DynamoDbTableUSentMails.Arn           
         PolicyName: DynamoDBPolicy
         Roles:
