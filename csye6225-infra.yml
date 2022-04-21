@@ -30,6 +30,9 @@ Parameters:
   LambdaS3Bucket:
     Description: "The name of the S3 bucket for Lambda"
     Type: String
+  CertificateArn:
+    Description: "The ARN of the SSL certificate"
+    Type: String
   # DBMasterUserPassword:
   #   Description: The password for the DB MasterUser
   #   Type: String
@@ -560,6 +563,8 @@ Resources:
     Properties:
       Description: "This is the parameter group for MySQL DB."
       Family: "mysql8.0"
+      Parameters:
+        performance_schema: true
       Tags:
           -
             Key: "Name"
@@ -590,7 +595,7 @@ Resources:
       - "DatabaseSecurityGroup"
     Properties:
       Engine: "mysql"
-      DBInstanceClass: "db.t2.micro"
+      DBInstanceClass: "db.t2.small"
       MultiAZ: "false"
       AllocatedStorage : "20"
       DBInstanceIdentifier: "csye6225"
@@ -602,6 +607,8 @@ Resources:
       DBParameterGroupName: !Ref DBParameterGroup
       PubliclyAccessible: false
       DBName: "csye6225"
+      StorageEncrypted: true
+      KmsKeyId: !GetAtt rdsKey.Arn
 
   ec2LaunchTemplate:
     Type: "AWS::EC2::LaunchTemplate"
@@ -614,7 +621,9 @@ Resources:
            Ebs: 
             VolumeType: "gp2"
             DeleteOnTermination: "true"
-            VolumeSize: "20"
+            VolumeSize: "20"  
+            Encrypted: "true"
+            KmsKeyId: !GetAtt ebsKey.Arn     
         ImageId: !Ref "AMIId"
         InstanceType : "t2.micro"
         KeyName: "dev-ssh-key"
@@ -681,7 +690,7 @@ Resources:
       Cooldown: "60"
       DesiredCapacity: "3"
       MinSize: "3"
-      MaxSize: "5"
+      MaxSize: "6"
       HealthCheckGracePeriod: 90
       HealthCheckType: "EC2"
       TargetGroupARNs:
@@ -777,7 +786,7 @@ Resources:
   loadBalancerSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
-      GroupDescription: "Allow traffic to port 80 from the internet"
+      GroupDescription: "Allow traffic to port 443 from the internet"
       GroupName: "loadbalancer"
       VpcId:
          Ref: "VPC"
@@ -826,9 +835,12 @@ Resources:
         - Type: "forward"
           TargetGroupArn: !Ref loadBalancerTargetGroup
       LoadBalancerArn: !Ref loadBalancer
-      Port: 80
-      Protocol: "HTTP"
-  
+      Port: 443
+      Protocol: "HTTPS"
+      Certificates: 
+        - 
+          CertificateArn: !Ref CertificateArn
+
   DNSRecord:
     Type: AWS::Route53::RecordSetGroup
     Properties:
@@ -1069,3 +1081,146 @@ Resources:
                   - !Ref LambdaS3Bucket
       Users:
         - "ghactions-lambda"
+
+  #Creating a new KMS Key for EBS encryption
+  ebsKey:
+    Type: 'AWS::KMS::Key'
+    Properties:
+      Description: "An symmetric KMS key for EBS encryption"
+      EnableKeyRotation: false
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Id: key-EBS
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: kms:*
+            Resource: "*"
+          - Sid: Allow access for Key Administrators
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:user/awscli"
+            Action:
+            - kms:Create*
+            - kms:Describe*
+            - kms:Enable*
+            - kms:List*
+            - kms:Put*
+            - kms:Update*
+            - kms:Revoke*
+            - kms:Disable*
+            - kms:Get*
+            - kms:Delete*
+            - kms:TagResource
+            - kms:UntagResource
+            - kms:ScheduleKeyDeletion
+            - kms:CancelKeyDeletion
+            Resource: "*"
+          - Sid: Allow use of the key
+            Effect: Allow
+            Principal:
+              AWS: 
+              - !Sub "arn:aws:iam::${AWS::AccountId}:user/awscli"
+              - !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling
+            Action:
+            - kms:Encrypt
+            - kms:Decrypt
+            - kms:ReEncrypt*
+            - kms:GenerateDataKey*
+            - kms:DescribeKey
+            Resource: "*"
+          - Sid: Allow attachment of persistent resources
+            Effect: Allow
+            Principal:
+              AWS: 
+              - !Sub "arn:aws:iam::${AWS::AccountId}:user/awscli"
+              - !Sub arn:aws:iam::${AWS::AccountId}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling
+            Action:
+            - kms:CreateGrant
+            - kms:ListGrants
+            - kms:RevokeGrant
+            Resource: "*"
+            Condition:
+              Bool:
+                kms:GrantIsForAWSResource: 'true'
+  
+  # Creating an alias for ebs encryption
+  ebsAlias:
+    Type: 'AWS::KMS::Alias'
+    Properties:
+      AliasName: alias/ebsKey
+      TargetKeyId: !Ref ebsKey
+
+  #Creating a new KMS Key for rds encryption
+  rdsKey:
+    Type: 'AWS::KMS::Key'
+    Properties:
+      Description: "An symmetric KMS key for RDS encryption"
+      EnableKeyRotation: false
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Id: key-EBS
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: kms:*
+            Resource: "*"
+          - Sid: Allow access for Key Administrators
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:user/awscli"
+            Action:
+            - kms:Create*
+            - kms:Describe*
+            - kms:Enable*
+            - kms:List*
+            - kms:Put*
+            - kms:Update*
+            - kms:Revoke*
+            - kms:Disable*
+            - kms:Get*
+            - kms:Delete*
+            - kms:TagResource
+            - kms:UntagResource
+            - kms:ScheduleKeyDeletion
+            - kms:CancelKeyDeletion
+            Resource: "*"
+          - Sid: Allow use of the key
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:user/awscli"
+            Action:
+            - kms:Encrypt
+            - kms:Decrypt
+            - kms:ReEncrypt*
+            - kms:GenerateDataKey*
+            - kms:DescribeKey
+            Resource: "*"
+          - Sid: Allow attachment of persistent resources
+            Effect: Allow
+            Principal:
+              AWS: 
+                - !Sub "arn:aws:iam::${AWS::AccountId}:user/awscli"
+            Action:
+            - kms:CreateGrant
+            - kms:ListGrants
+            - kms:RevokeGrant
+            Resource: "*"
+            Condition:
+              Bool:
+                kms:GrantIsForAWSResource: 'true'
+              StringEquals:
+                kms:ViaService: !Sub rds.${AWS::Region}.amazonaws.com
+
+  # Creating an alias for rds encryption
+  rdsAlias:
+    Type: 'AWS::KMS::Alias'
+    Properties:
+      AliasName: alias/rdsKey
+      TargetKeyId: !Ref rdsKey

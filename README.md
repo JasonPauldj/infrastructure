@@ -33,3 +33,8 @@ aws cloudformation update-stack --stack-name policystack --template-body file://
 ```
 aws cloudformation delete-stack --stack-name policystack
 ```
+
+* Command to import certificate to aws certificate manager
+```
+aws acm import-certificate --private-key fileb:///Users/jasonpauldarivemula/Downloads/prod-ca/pk.pem --certificate fileb:///Users/jasonpauldarivemula/Downloads/prod-ca/prod_jasonpauldj_me.pem --certificate-chain fileb:///Users/jasonpauldarivemula/Downloads/prod-ca/prod_jasonpauldj_me.ca-bundle.pem
+```
